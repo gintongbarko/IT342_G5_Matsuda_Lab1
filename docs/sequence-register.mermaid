@@ -1,0 +1,74 @@
+sequenceDiagram
+    participant User as User (Browser)
+    participant UI as Register Page UI
+    participant AuthCtrl as AuthController
+    participant AuthSvc as AuthService
+    participant PwdEnc as PasswordEncoder
+    participant UserRepo as UserRepository
+    participant DB as Database
+    participant Token as TokenProvider
+    participant SessRepo as SessionRepository
+    
+    User->>UI: Enter username, email, password
+    User->>UI: Click Register Button
+    
+    UI->>UI: Validate input (client-side)
+    alt Invalid Input
+        UI-->>User: Display error message
+    else Valid Input
+        UI->>AuthCtrl: POST /api/register {username, email, password}
+        
+        AuthCtrl->>AuthSvc: registerUser(userData)
+        
+        AuthSvc->>AuthSvc: Validate input (server-side)
+        alt Invalid Data
+            AuthSvc-->>AuthCtrl: Validation Error
+            AuthCtrl-->>UI: 400 Bad Request
+            UI-->>User: Display validation error
+        else Valid Data
+            AuthSvc->>UserRepo: findByUsername(username)
+            UserRepo->>DB: SELECT * FROM users WHERE username = ?
+            DB-->>UserRepo: Result
+            UserRepo-->>AuthSvc: User or null
+            
+            alt User Exists
+                AuthSvc-->>AuthCtrl: User already exists
+                AuthCtrl-->>UI: 409 Conflict
+                UI-->>User: Display "User already exists"
+            else User Not Exists
+                AuthSvc->>UserRepo: findByEmail(email)
+                UserRepo->>DB: SELECT * FROM users WHERE email = ?
+                DB-->>UserRepo: Result
+                UserRepo-->>AuthSvc: User or null
+                
+                alt Email Exists
+                    AuthSvc-->>AuthCtrl: Email already exists
+                    AuthCtrl-->>UI: 409 Conflict
+                    UI-->>User: Display "Email already exists"
+                else Email Available
+                    AuthSvc->>PwdEnc: encode(password)
+                    PwdEnc-->>AuthSvc: passwordHash
+                    
+                    AuthSvc->>UserRepo: save(newUser)
+                    UserRepo->>DB: INSERT INTO users (username, email, password_hash, created_at)
+                    DB-->>UserRepo: Success
+                    UserRepo-->>AuthSvc: User object
+                    
+                    AuthSvc->>Token: generateToken(userId)
+                    Token-->>AuthSvc: authToken
+                    
+                    AuthSvc->>SessRepo: save(session)
+                    SessRepo->>DB: INSERT INTO user_sessions
+                    DB-->>SessRepo: Success
+                    SessRepo-->>AuthSvc: Session created
+                    
+                    AuthSvc-->>AuthCtrl: {user, token}
+                    AuthCtrl-->>UI: 201 Created {user, token}
+                    
+                    UI->>UI: Store token in localStorage
+                    UI-->>User: Redirect to Dashboard
+                    UI-->>User: Display "Registration successful"
+                end
+            end
+        end
+    end

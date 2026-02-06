@@ -1,0 +1,190 @@
+classDiagram
+    class User {
+        -int userId
+        -string username
+        -string email
+        -string passwordHash
+        -datetime createdAt
+        -datetime updatedAt
+        -datetime lastLogin
+        -boolean isActive
+        +register(username, email, password) boolean
+        +login(username, password) string
+        +logout() boolean
+        +updateProfile(data) boolean
+        +changePassword(oldPassword, newPassword) boolean
+    }
+    
+    class Employee {
+        -int employeeId
+        -string employeeName
+        -int createdByUserId
+        -datetime createdAt
+        -boolean isActive
+        +create(employeeName, userId) boolean
+        +update(employeeId, data) boolean
+        +delete(employeeId) boolean
+        +getAll(userId) Employee[]
+        +getById(employeeId) Employee
+    }
+    
+    class TimesheetRecord {
+        -int recordId
+        -int employeeId
+        -int createdByUserId
+        -datetime clockInTime
+        -datetime clockOutTime
+        -decimal hoursWorked
+        -string status
+        -datetime createdAt
+        -datetime updatedAt
+        +clockIn(employeeId, userId) boolean
+        +clockOut(recordId) boolean
+        +calculateHours() decimal
+        +getRecordsByEmployee(employeeId) TimesheetRecord[]
+        +getAllRecords(userId) TimesheetRecord[]
+        +searchRecords(query) TimesheetRecord[]
+    }
+    
+    class UserSession {
+        -int sessionId
+        -int userId
+        -string sessionToken
+        -datetime createdAt
+        -datetime expiresAt
+        -boolean isActive
+        -string ipAddress
+        -string userAgent
+        +create(userId, ipAddress, userAgent) string
+        +validate(token) boolean
+        +invalidate(token) boolean
+        +deleteExpired() boolean
+        +getActiveSessionsByUser(userId) UserSession[]
+    }
+    
+    class AuthController {
+        -AuthService authService
+        +register(request, response) void
+        +login(request, response) void
+        +logout(request, response) void
+        +getProfile(request, response) void
+        +updateProfile(request, response) void
+    }
+    
+    class EmployeeController {
+        -EmployeeService employeeService
+        +createEmployee(request, response) void
+        +getEmployees(request, response) void
+        +updateEmployee(request, response) void
+        +deleteEmployee(request, response) void
+    }
+    
+    class TimesheetController {
+        -TimesheetService timesheetService
+        +clockIn(request, response) void
+        +clockOut(request, response) void
+        +getRecords(request, response) void
+        +searchRecords(request, response) void
+        +getSummary(request, response) void
+    }
+    
+    class AuthService {
+        -UserRepository userRepository
+        -PasswordEncoder passwordEncoder
+        -TokenProvider tokenProvider
+        +registerUser(userData) User
+        +authenticateUser(credentials) string
+        +logoutUser(token) boolean
+        +validateToken(token) boolean
+    }
+    
+    class EmployeeService {
+        -EmployeeRepository employeeRepository
+        +addEmployee(employeeName, userId) Employee
+        +getEmployeeList(userId) Employee[]
+        +updateEmployee(employeeId, data) Employee
+        +removeEmployee(employeeId) boolean
+    }
+    
+    class TimesheetService {
+        -TimesheetRepository timesheetRepository
+        +recordClockIn(employeeId, userId) TimesheetRecord
+        +recordClockOut(recordId) TimesheetRecord
+        +getTimesheetRecords(userId) TimesheetRecord[]
+        +searchTimesheets(query, userId) TimesheetRecord[]
+        +calculateSummary(userId) object
+    }
+    
+    class UserRepository {
+        -Database database
+        +save(user) User
+        +findById(userId) User
+        +findByUsername(username) User
+        +findByEmail(email) User
+        +update(user) User
+        +delete(userId) boolean
+    }
+    
+    class EmployeeRepository {
+        -Database database
+        +save(employee) Employee
+        +findById(employeeId) Employee
+        +findByUserId(userId) Employee[]
+        +update(employee) Employee
+        +delete(employeeId) boolean
+    }
+    
+    class TimesheetRepository {
+        -Database database
+        +save(record) TimesheetRecord
+        +findById(recordId) TimesheetRecord
+        +findByEmployeeId(employeeId) TimesheetRecord[]
+        +findByUserId(userId) TimesheetRecord[]
+        +update(record) TimesheetRecord
+        +delete(recordId) boolean
+    }
+    
+    class SessionRepository {
+        -Database database
+        +save(session) UserSession
+        +findByToken(token) UserSession
+        +findByUserId(userId) UserSession[]
+        +update(session) UserSession
+        +delete(sessionId) boolean
+        +deleteExpired() boolean
+    }
+    
+    class PasswordEncoder {
+        +encode(password) string
+        +matches(rawPassword, encodedPassword) boolean
+    }
+    
+    class TokenProvider {
+        -string secretKey
+        +generateToken(userId) string
+        +validateToken(token) boolean
+        +getUserIdFromToken(token) int
+    }
+    
+    %% Relationships
+    User "1" -- "0..*" Employee : manages
+    User "1" -- "0..*" TimesheetRecord : creates
+    Employee "1" -- "0..*" TimesheetRecord : has
+    User "1" -- "0..*" UserSession : has
+    
+    AuthController --> AuthService : uses
+    EmployeeController --> EmployeeService : uses
+    TimesheetController --> TimesheetService : uses
+    
+    AuthService --> UserRepository : uses
+    AuthService --> PasswordEncoder : uses
+    AuthService --> TokenProvider : uses
+    AuthService --> SessionRepository : uses
+    
+    EmployeeService --> EmployeeRepository : uses
+    TimesheetService --> TimesheetRepository : uses
+    
+    UserRepository --> User : manages
+    EmployeeRepository --> Employee : manages
+    TimesheetRepository --> TimesheetRecord : manages
+    SessionRepository --> UserSession : manages

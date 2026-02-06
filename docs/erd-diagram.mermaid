@@ -1,0 +1,47 @@
+erDiagram
+    USERS ||--o{ EMPLOYEES : manages
+    USERS ||--o{ TIMESHEET_RECORDS : creates
+    EMPLOYEES ||--o{ TIMESHEET_RECORDS : "clocks in/out"
+    USERS ||--o{ USER_SESSIONS : has
+    
+    USERS {
+        int user_id PK "AUTO_INCREMENT"
+        varchar_50 username UK "UNIQUE, NOT NULL"
+        varchar_100 email UK "UNIQUE, NOT NULL"
+        varchar_255 password_hash "NOT NULL"
+        datetime created_at "DEFAULT CURRENT_TIMESTAMP"
+        datetime updated_at "DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+        datetime last_login "NULL"
+        tinyint is_active "DEFAULT 1"
+    }
+    
+    EMPLOYEES {
+        int employee_id PK "AUTO_INCREMENT"
+        varchar_100 employee_name "NOT NULL"
+        int created_by_user_id FK "NOT NULL"
+        datetime created_at "DEFAULT CURRENT_TIMESTAMP"
+        tinyint is_active "DEFAULT 1"
+    }
+    
+    TIMESHEET_RECORDS {
+        int record_id PK "AUTO_INCREMENT"
+        int employee_id FK "NOT NULL"
+        int created_by_user_id FK "NOT NULL"
+        datetime clock_in_time "NOT NULL"
+        datetime clock_out_time "NULL"
+        decimal_10_2 hours_worked "NULL"
+        varchar_20 status "DEFAULT 'clocked_in'"
+        datetime created_at "DEFAULT CURRENT_TIMESTAMP"
+        datetime updated_at "DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+    }
+    
+    USER_SESSIONS {
+        int session_id PK "AUTO_INCREMENT"
+        int user_id FK "NOT NULL"
+        varchar_255 session_token UK "UNIQUE, NOT NULL"
+        datetime created_at "DEFAULT CURRENT_TIMESTAMP"
+        datetime expires_at "NOT NULL"
+        tinyint is_active "DEFAULT 1"
+        varchar_45 ip_address "NULL"
+        text user_agent "NULL"
+    }

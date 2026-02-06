@@ -1,0 +1,87 @@
+sequenceDiagram
+    participant User as User (Browser)
+    participant UI as Login Page UI
+    participant AuthCtrl as AuthController
+    participant AuthSvc as AuthService
+    participant UserRepo as UserRepository
+    participant DB as Database
+    participant PwdEnc as PasswordEncoder
+    participant Token as TokenProvider
+    participant SessRepo as SessionRepository
+    
+    User->>UI: Enter username/email, password
+    User->>UI: Click Login Button
+    
+    UI->>UI: Validate input (client-side)
+    alt Empty Fields
+        UI-->>User: Display "Please fill all fields"
+    else Valid Input
+        UI->>AuthCtrl: POST /api/login {username, password}
+        
+        AuthCtrl->>AuthSvc: authenticateUser(credentials)
+        
+        AuthSvc->>UserRepo: findByUsername(username)
+        UserRepo->>DB: SELECT * FROM users WHERE username = ? OR email = ?
+        DB-->>UserRepo: Result
+        UserRepo-->>AuthSvc: User or null
+        
+        alt User Not Found
+            AuthSvc-->>AuthCtrl: Invalid credentials
+            AuthCtrl-->>UI: 401 Unauthorized
+            UI-->>User: Display "Invalid credentials"
+        else User Found
+            AuthSvc->>AuthSvc: Check if user.isActive
+            
+            alt Account Inactive
+                AuthSvc-->>AuthCtrl: Account disabled
+                AuthCtrl-->>UI: 403 Forbidden
+                UI-->>User: Display "Account is disabled"
+            else Account Active
+                AuthSvc->>PwdEnc: matches(password, user.passwordHash)
+                PwdEnc-->>AuthSvc: boolean result
+                
+                alt Password Incorrect
+                    AuthSvc->>UserRepo: incrementFailedAttempts(userId)
+                    UserRepo->>DB: UPDATE users SET failed_attempts = failed_attempts + 1
+                    DB-->>UserRepo: Success
+                    
+                    AuthSvc->>AuthSvc: Check if attempts > 5
+                    alt Too Many Attempts
+                        AuthSvc->>UserRepo: lockAccount(userId)
+                        UserRepo->>DB: UPDATE users SET is_active = 0
+                        DB-->>UserRepo: Success
+                        AuthSvc-->>AuthCtrl: Account locked
+                        AuthCtrl-->>UI: 403 Forbidden
+                        UI-->>User: Display "Account locked"
+                    else Attempts OK
+                        AuthSvc-->>AuthCtrl: Invalid password
+                        AuthCtrl-->>UI: 401 Unauthorized
+                        UI-->>User: Display "Invalid credentials"
+                    end
+                else Password Correct
+                    AuthSvc->>UserRepo: resetFailedAttempts(userId)
+                    UserRepo->>DB: UPDATE users SET failed_attempts = 0
+                    DB-->>UserRepo: Success
+                    
+                    AuthSvc->>UserRepo: updateLastLogin(userId)
+                    UserRepo->>DB: UPDATE users SET last_login = NOW()
+                    DB-->>UserRepo: Success
+                    
+                    AuthSvc->>Token: generateToken(userId)
+                    Token-->>AuthSvc: authToken
+                    
+                    AuthSvc->>SessRepo: save(session)
+                    SessRepo->>DB: INSERT INTO user_sessions
+                    DB-->>SessRepo: Success
+                    SessRepo-->>AuthSvc: Session created
+                    
+                    AuthSvc-->>AuthCtrl: {user, token}
+                    AuthCtrl-->>UI: 200 OK {user, token}
+                    
+                    UI->>UI: Store token in localStorage
+                    UI-->>User: Redirect to Dashboard
+                    UI-->>User: Display "Login successful"
+                end
+            end
+        end
+    end

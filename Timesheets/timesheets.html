@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Employee Timesheet Tracker</title>
+		<link rel="stylesheet" href="styles.css" />
+	</head>
+	<body>
+		<header>
+			<h1>⏳ Employee Timesheet Tracker</h1>
+		</header>
+
+		<main class="container">
+			<!-- Left Column: Employee Management -->
+			<section class="column employee-management">
+				<!-- Add New Employee -->
+				<section class="employee-form">
+					<h2>Add Employee</h2>
+					<form id="employeeForm">
+						<input
+							type="text"
+							id="newEmployee"
+							placeholder="Enter Employee Name"
+							required
+						/>
+						<button type="submit">Add Employee</button>
+					</form>
+				</section>
+
+				<!-- Clock In/Out Form -->
+				<section class="timesheet-form">
+					<h2>Clock In / Clock Out</h2>
+        
+					<form id="timesheetForm">
+						<label for="employee">Select Employee:</label>
+						<select id="employee" required>
+							<option value="" disabled selected>Select Employee</option>
+						</select>
+						<button type="button" id="clockIn">Clock In</button>
+						<button type="button" id="clockOut" disabled>Clock Out</button>
+					</form>
+				</section>
+			</section>
+
+			<!-- Middle Column: Timesheet Records -->
+			<section class="column records">
+				<h2>Timesheet Records</h2>
+                <input type="text" id="searchEmployee" placeholder="Search Employee">
+				<table>
+					<thead>
+						<tr>
+							<th>Employee</th>
+							<th>Clock In</th>
+							<th>Clock Out</th>
+							<th>Hours Worked</th>
+						</tr>
+					</thead>
+					<tbody id="timesheetTable"></tbody>
+				</table>
+			</section>
+
+			<!-- Right Column: Summary -->
+			<section class="column summary">
+				<h2>Employee Summary</h2>
+				<div id="summaryTable"></div>
+			</section>
+		</main>
+
+		<script src="script.js"></script>
+	</body>
+</html>

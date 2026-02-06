@@ -1,0 +1,54 @@
+flowchart TD
+    Start([User Opens Register Page]) --> InputData[User Enters:<br/>- Username<br/>- Email<br/>- Password<br/>- Confirm Password]
+    
+    InputData --> SubmitForm[User Clicks Register Button]
+    
+    SubmitForm --> ValidateClient{Client-Side<br/>Validation}
+    
+    ValidateClient -->|Invalid| ShowClientError[Display Error Message:<br/>- Empty fields<br/>- Invalid email format<br/>- Password mismatch<br/>- Weak password]
+    ShowClientError --> InputData
+    
+    ValidateClient -->|Valid| SendRequest[Send POST Request<br/>to /api/register]
+    
+    SendRequest --> ValidateServer{Server-Side<br/>Validation}
+    
+    ValidateServer -->|Invalid Data| ReturnError400[Return 400:<br/>Validation Error]
+    ReturnError400 --> DisplayError[Display Error Message]
+    DisplayError --> InputData
+    
+    ValidateServer -->|Valid| CheckExists{Username/Email<br/>Already Exists?}
+    
+    CheckExists -->|Yes| ReturnError409[Return 409:<br/>Conflict Error]
+    ReturnError409 --> DisplayConflict[Display:<br/>'User already exists']
+    DisplayConflict --> InputData
+    
+    CheckExists -->|No| HashPassword[Hash Password<br/>using bcrypt/Argon2]
+    
+    HashPassword --> SaveDB[Save User to Database:<br/>- username<br/>- email<br/>- password_hash<br/>- created_at]
+    
+    SaveDB --> DBSuccess{Database<br/>Operation<br/>Successful?}
+    
+    DBSuccess -->|No| ReturnError500[Return 500:<br/>Server Error]
+    ReturnError500 --> DisplayServerError[Display:<br/>'Registration failed.<br/>Try again']
+    DisplayServerError --> InputData
+    
+    DBSuccess -->|Yes| GenerateToken[Generate JWT Token/<br/>Session ID]
+    
+    GenerateToken --> ReturnSuccess[Return 201:<br/>Registration Successful<br/>+ Auth Token]
+    
+    ReturnSuccess --> StoreToken[Store Token in:<br/>- LocalStorage/SessionStorage<br/>- Cookie]
+    
+    StoreToken --> RedirectDashboard[Redirect to<br/>Dashboard/Login Page]
+    
+    RedirectDashboard --> End([Registration Complete])
+    
+    style Start fill:#90EE90
+    style End fill:#FFB6C6
+    style ShowClientError fill:#FFE4B5
+    style DisplayError fill:#FFE4B5
+    style DisplayConflict fill:#FFE4B5
+    style DisplayServerError fill:#FFE4B5
+    style SaveDB fill:#87CEEB
+    style HashPassword fill:#DDA0DD
+    style GenerateToken fill:#DDA0DD
+    style RedirectDashboard fill:#98FB98

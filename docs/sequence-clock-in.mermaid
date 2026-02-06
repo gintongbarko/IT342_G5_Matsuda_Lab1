@@ -1,0 +1,52 @@
+sequenceDiagram
+    participant User as User (Browser)
+    participant UI as Dashboard UI
+    participant TSCtrl as TimesheetController
+    participant TSSvc as TimesheetService
+    participant TSRepo as TimesheetRepository
+    participant DB as Database
+    participant Token as TokenProvider
+    
+    User->>UI: Select Employee from dropdown
+    User->>UI: Click "Clock In" button
+    
+    UI->>UI: Get token from localStorage
+    UI->>UI: Get selected employeeId
+    
+    alt No Employee Selected
+        UI-->>User: Display "Please select an employee"
+    else Employee Selected
+        UI->>TSCtrl: POST /api/timesheet/clock-in {employeeId, token}
+        
+        TSCtrl->>TSCtrl: Validate token
+        TSCtrl->>Token: getUserIdFromToken(token)
+        Token-->>TSCtrl: userId
+        
+        TSCtrl->>TSSvc: recordClockIn(employeeId, userId)
+        
+        TSSvc->>TSRepo: findActiveRecordByEmployee(employeeId)
+        TSRepo->>DB: SELECT * FROM timesheet_records WHERE employee_id = ? AND status = 'clocked_in'
+        DB-->>TSRepo: Result
+        TSRepo-->>TSSvc: Record or null
+        
+        alt Already Clocked In
+            TSSvc-->>TSCtrl: Error: Already clocked in
+            TSCtrl-->>UI: 409 Conflict
+            UI-->>User: Display "Employee has already clocked in"
+        else Not Clocked In
+            TSSvc->>TSSvc: Create new TimesheetRecord
+            Note over TSSvc: clockInTime = NOW()<br/>status = 'clocked_in'<br/>clockOutTime = NULL<br/>hoursWorked = NULL
+            
+            TSSvc->>TSRepo: save(timesheetRecord)
+            TSRepo->>DB: INSERT INTO timesheet_records (employee_id, created_by_user_id, clock_in_time, status)
+            DB-->>TSRepo: Success
+            TSRepo-->>TSSvc: TimesheetRecord
+            
+            TSSvc-->>TSCtrl: Clock in successful
+            TSCtrl-->>UI: 201 Created {record}
+            
+            UI->>UI: Enable "Clock Out" button
+            UI->>UI: Disable "Clock In" button
+            UI-->>User: Display "Clocked in successfully"
+        end
+    end

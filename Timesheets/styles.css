@@ -1,0 +1,109 @@
+/* General Styles */
+body {
+	font-family: "Arial", sans-serif;
+	margin: 0;
+	padding: 0;
+	background-color: #f4f4f4;
+	color: #333;
+}
+
+/* Header */
+header {
+	background: #007bff;
+	color: white;
+	padding: 20px;
+	text-align: center;
+}
+
+/* Layout */
+.container {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	padding: 20px;
+}
+
+/* Column Styling */
+.column {
+	background: white;
+	padding: 20px;
+	border-radius: 10px;
+	box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+	margin-bottom: 20px;
+}
+
+.records {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Responsive Layout */
+@media screen and (min-width: 1024px) {
+	.container {
+		display: grid;
+		grid-template-columns: 1fr 1fr 1fr; /* Three equal columns */
+		gap: 20px;
+	}
+}
+
+@media screen and (max-width: 1023px) {
+	.container {
+		display: flex;
+		flex-direction: column;
+	}
+}
+
+/* Form & Inputs */
+form {
+	display: flex;
+	flex-direction: column;
+}
+
+input,
+select,
+button {
+	padding: 10px;
+	font-size: 16px;
+	border-radius: 5px;
+	margin-top: 10px;
+}
+
+button {
+	background: #007bff;
+	color: white;
+	border: none;
+	cursor: pointer;
+}
+
+button:hover {
+	background: #0056b3;
+}
+
+button:disabled {
+	background: #ccc;
+	cursor: not-allowed;
+}
+
+/* Table */
+table {
+	width: 100%;
+	border-collapse: collapse;
+	margin-top: 10px;
+}
+
+th,
+td {
+	border: 1px solid #ddd;
+	padding: 10px;
+	text-align: center;
+}
+
+/* Summary Table */
+#summaryTable p {
+	background: #f8f9fa;
+	padding: 10px;
+	margin: 5px 0;
+	border-radius: 5px;
+}
+
+

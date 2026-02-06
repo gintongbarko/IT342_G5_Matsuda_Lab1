@@ -1,0 +1,66 @@
+sequenceDiagram
+    participant User as User (Browser)
+    participant UI as Dashboard UI
+    participant AuthCtrl as AuthController
+    participant AuthSvc as AuthService
+    participant Token as TokenProvider
+    participant SessRepo as SessionRepository
+    participant DB as Database
+    
+    User->>UI: Click Logout Button
+    
+    UI->>UI: Show confirmation dialog (optional)
+    
+    alt User Cancels
+        UI-->>User: Cancel logout
+    else User Confirms
+        UI->>UI: Get token from localStorage
+        
+        UI->>AuthCtrl: POST /api/logout {token}
+        
+        AuthCtrl->>AuthSvc: logoutUser(token)
+        
+        AuthSvc->>Token: validateToken(token)
+        Token-->>AuthSvc: boolean result
+        
+        alt Token Invalid/Expired
+            AuthSvc-->>AuthCtrl: Invalid token
+            AuthCtrl-->>UI: 401 Unauthorized
+            UI->>UI: Clear localStorage anyway
+            UI-->>User: Redirect to Login
+            UI-->>User: Display "Session expired"
+        else Token Valid
+            AuthSvc->>Token: getUserIdFromToken(token)
+            Token-->>AuthSvc: userId
+            
+            AuthSvc->>SessRepo: findByToken(token)
+            SessRepo->>DB: SELECT * FROM user_sessions WHERE session_token = ?
+            DB-->>SessRepo: Session
+            SessRepo-->>AuthSvc: UserSession
+            
+            alt Session Found
+                AuthSvc->>SessRepo: update(session.isActive = false)
+                SessRepo->>DB: UPDATE user_sessions SET is_active = 0 WHERE session_token = ?
+                DB-->>SessRepo: Success
+                SessRepo-->>AuthSvc: Session invalidated
+                
+                AuthSvc-->>AuthCtrl: Logout successful
+                AuthCtrl-->>UI: 200 OK
+                
+                UI->>UI: Clear localStorage
+                UI->>UI: Clear sessionStorage
+                UI->>UI: Delete cookies
+                UI->>UI: Reset UI state
+                
+                UI-->>User: Redirect to Login
+                UI-->>User: Display "Logged out successfully"
+            else Session Not Found
+                AuthSvc-->>AuthCtrl: Session not found
+                AuthCtrl-->>UI: 404 Not Found
+                
+                UI->>UI: Clear localStorage anyway
+                UI-->>User: Redirect to Login
+                UI-->>User: Display "Logged out"
+            end
+        end
+    end
