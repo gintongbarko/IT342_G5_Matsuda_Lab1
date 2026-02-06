@@ -10,6 +10,7 @@
 
 # production
 /build
+/Timesheets
 
 # misc
 .DS_Store
