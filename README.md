@@ -45,6 +45,12 @@ The Employee Timesheet Tracker is a full-stack web and mobile application design
 
   -----------------------------------------------------------------------
 
+  ### **Password Encryption:**
+
+  **BCrypt** - Adaptive password hashing function designed to secure passwords by transforming it into unreadable hashes
+
+  -----------------------------------------------------------------------
+
 ### **Deployment:**
 
   **TBD** - TBD
@@ -55,7 +61,7 @@ The Employee Timesheet Tracker is a full-stack web and mobile application design
 
 (Current as of latest commit)
 
-    IT432_G5_Matsuda_Lab1/
+    IT342_G5_Matsuda_Lab1/
     ├── backend/
     ├── docs/
     ├── mobile/
