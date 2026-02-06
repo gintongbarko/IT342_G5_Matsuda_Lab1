@@ -29,7 +29,7 @@ The Employee Timesheet Tracker is a full-stack web and mobile application design
 
 ### **Database:**
 
-  **MySQL** - TBD
+  **MySQL** - Relational database for data persistence
 
   -----------------------------------------------------------------------
 
@@ -41,7 +41,7 @@ The Employee Timesheet Tracker is a full-stack web and mobile application design
 
 ### **Mobile:**
 
-  **Kotlin** - Programming Language responsible for building Mobile Apps
+  **Kotlin** - Programming language responsible for building mobile apps
 
   -----------------------------------------------------------------------
 
@@ -55,12 +55,13 @@ The Employee Timesheet Tracker is a full-stack web and mobile application design
 
 (Current as of latest commit)
 
-    CSIT327-G5-EcoTrack/
+    IT432_G5_Matsuda_Lab1/
     ├── backend/
     ├── docs/
     ├── mobile/
-    ├── History_App/
-    └── web/
+    ├── web/
+    ├── README.md           #This file
+    └── TASK_CHECKLIST.md
 
 ------------------------------------------------------------------------
 
