@@ -1,4 +1,4 @@
-# ⏳ Employee Tracksheet Tracker (Unofficial name)
+# ⏳ Employee Timesheet Tracker (Unofficial name)
 
 A web-based application designed to manage employee time tracking and attendance records.
 
@@ -114,10 +114,10 @@ The Employee Timesheet Tracker is a full-stack web and mobile application design
 
 ## 📡 API Endpoints
 
-- POST /api/auth/register - Register new user
-- POST /api/auth/login - Login (returns JWT)
-- POST /api/auth/logout - Logout (invalidates session)
-- GET /api/user/me - Get current user (protected, requires Bearer token)
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - Login (returns JWT)
+- `POST /api/auth/logout` - Logout (invalidates session)
+- `GET /api/user/me` - Get current user (protected, requires Bearer token)
 
 ------------------------------------------------------------------------
 
