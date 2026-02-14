@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "com.it342.timesheets"
-    compileSdk = 32
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.it342.timesheets"
         minSdk = 24
-        targetSdk = 32
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
         // Android emulator: 10.0.2.2 = host machine. Use your machine IP for physical device.
