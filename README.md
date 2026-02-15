@@ -77,7 +77,9 @@ The Employee Timesheet Tracker is a full-stack web and mobile application design
 
 1. Create MySQL database (optional - app creates it if configured):
    ```sql
-   CREATE DATABASE timesheets_db;
+   CREATE USER 'timesheets'@'localhost' IDENTIFIED BY 'your-password-here';
+   GRANT ALL PRIVILEGES ON timesheets_db.* TO 'timesheets'@'localhost';
+   FLUSH PRIVILEGES;
    ```
 
 2. Configure database in `backend/src/main/resources/application.properties`:
