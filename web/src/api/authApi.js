@@ -8,8 +8,14 @@ import { api } from './client';
  * GET /api/user/me (protected)
  */
 
-export async function register(username, email, password) {
-  const data = await api.post('/api/auth/register', { username, email, password }, false);
+export async function register(username, email, password, role, employerUsername = null) {
+  const data = await api.post('/api/auth/register', { username, email, password, role, employerUsername }, false);
+  return data;
+}
+
+export async function searchEmployers(query) {
+  const value = encodeURIComponent(query || '');
+  const data = await api.get(`/api/auth/employers/search?q=${value}`, false);
   return data;
 }
 

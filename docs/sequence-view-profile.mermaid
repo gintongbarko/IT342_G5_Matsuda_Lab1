@@ -1,82 +1,47 @@
 sequenceDiagram
-    participant User as User (Browser)
-    participant UI as Dashboard UI
-    participant AuthCtrl as AuthController
+    participant User as User (Web/Mobile)
+    participant UI as Protected UI
+    participant UserCtrl as UserController
     participant AuthSvc as AuthService
-    participant Token as TokenProvider
-    participant UserRepo as UserRepository
-    participant EmpCtrl as EmployeeController
-    participant EmpSvc as EmployeeService
-    participant EmpRepo as EmployeeRepository
     participant TSCtrl as TimesheetController
     participant TSSvc as TimesheetService
-    participant TSRepo as TimesheetRepository
-    participant DB as Database
-    
-    User->>UI: Navigate to Dashboard
-    
-    UI->>UI: Get token from localStorage
-    
-    alt No Token
-        UI-->>User: Redirect to Login
-    else Token Exists
-        UI->>AuthCtrl: GET /api/profile {Authorization: token}
-        
-        AuthCtrl->>AuthSvc: validateToken(token)
-        AuthSvc->>Token: validateToken(token)
-        Token-->>AuthSvc: boolean result
-        
-        alt Token Invalid
-            AuthSvc-->>AuthCtrl: Unauthorized
-            AuthCtrl-->>UI: 401 Unauthorized
-            UI->>UI: Clear localStorage
-            UI-->>User: Redirect to Login
-        else Token Valid
-            AuthSvc->>Token: getUserIdFromToken(token)
-            Token-->>AuthSvc: userId
-            
-            AuthSvc->>UserRepo: findById(userId)
-            UserRepo->>DB: SELECT * FROM users WHERE user_id = ?
-            DB-->>UserRepo: User data
-            UserRepo-->>AuthSvc: User object
-            
-            AuthSvc-->>AuthCtrl: User profile
-            AuthCtrl-->>UI: 200 OK {user}
-            
-            UI->>UI: Display user info
-            
-            par Load Employees
-                UI->>EmpCtrl: GET /api/employees {Authorization: token}
-                EmpCtrl->>EmpSvc: getEmployeeList(userId)
-                EmpSvc->>EmpRepo: findByUserId(userId)
-                EmpRepo->>DB: SELECT * FROM employees WHERE created_by_user_id = ?
-                DB-->>EmpRepo: Employee list
-                EmpRepo-->>EmpSvc: Employee[]
-                EmpSvc-->>EmpCtrl: Employee[]
-                EmpCtrl-->>UI: 200 OK {employees}
-                UI->>UI: Populate employee dropdown
-            and Load Timesheet Records
-                UI->>TSCtrl: GET /api/timesheet/records {Authorization: token}
-                TSCtrl->>TSSvc: getTimesheetRecords(userId)
-                TSSvc->>TSRepo: findByUserId(userId)
-                TSRepo->>DB: SELECT * FROM timesheet_records WHERE created_by_user_id = ?
-                DB-->>TSRepo: Record list
-                TSRepo-->>TSSvc: TimesheetRecord[]
-                TSSvc-->>TSCtrl: TimesheetRecord[]
-                TSCtrl-->>UI: 200 OK {records}
-                UI->>UI: Display timesheet table
-            and Load Summary
-                UI->>TSCtrl: GET /api/timesheet/summary {Authorization: token}
-                TSCtrl->>TSSvc: calculateSummary(userId)
-                TSSvc->>TSRepo: findByUserId(userId)
-                TSRepo->>DB: SELECT employee_id, SUM(hours_worked) FROM timesheet_records GROUP BY employee_id
-                DB-->>TSRepo: Summary data
-                TSRepo-->>TSSvc: Summary object
-                TSSvc-->>TSCtrl: Summary
-                TSCtrl-->>UI: 200 OK {summary}
-                UI->>UI: Display employee summary
-            end
-            
-            UI-->>User: Show complete dashboard
-        end
+    participant UserRepo as UserRepository
+    participant EmpRepo as EmployeeRepository
+    participant TSRepo as TimesheetRecordRepository
+    participant JWT as JwtUtil
+    participant DB as MySQL
+
+    User->>UI: Open app/dashboard
+    UI->>UserCtrl: GET /api/user/me (Bearer token)
+    UserCtrl->>AuthSvc: getCurrentUser(token)
+    AuthSvc->>JWT: validateToken + getUserIdFromToken
+    AuthSvc->>UserRepo: findById(userId)
+    UserRepo->>DB: SELECT users
+    DB-->>UserRepo: user row
+    UserRepo-->>AuthSvc: User
+    AuthSvc-->>UserCtrl: UserResponse{role, employerName}
+    UserCtrl-->>UI: 200 OK
+
+    UI->>TSCtrl: GET /api/timesheets/dashboard (Bearer token)
+    TSCtrl->>TSSvc: getDashboard(authenticatedUserId)
+
+    alt role = EMPLOYER
+        TSSvc->>EmpRepo: findByCreatedByUser_UserIdAndIsActiveTrueOrderByEmployeeNameAsc
+        EmpRepo->>DB: SELECT employees list
+        TSSvc->>TSRepo: findByCreatedByUser_UserIdOrderByClockInAtDesc
+        TSRepo->>DB: SELECT employee logs
+        DB-->>TSSvc: employees + records
+        TSSvc-->>TSCtrl: dashboard(employees,records,clockedIn=false)
+    else role = EMPLOYEE
+        TSSvc->>EmpRepo: findTopByEmployeeNameAndCreatedByUser_UserIdOrderByEmployeeIdDesc
+        EmpRepo->>DB: SELECT employee row
+        TSSvc->>TSRepo: findByEmployee_EmployeeIdOrderByClockInAtDesc
+        TSRepo->>DB: SELECT own records
+        TSSvc->>TSRepo: findFirstByEmployee_EmployeeIdAndStatusOrderByClockInAtDesc(...,"clocked_in")
+        TSRepo->>DB: SELECT active record
+        DB-->>TSSvc: records + active flag
+        TSSvc-->>TSCtrl: dashboard(employerName,accumulatedHours,clockedIn,records)
     end
+
+    TSCtrl-->>UI: 200 OK TimesheetDashboardResponse
+    UI-->>User: Render role-based dashboard view

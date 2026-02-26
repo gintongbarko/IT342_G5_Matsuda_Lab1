@@ -33,9 +33,9 @@ export function AuthProvider({ children }) {
     fetchUser();
   }, [fetchUser]);
 
-  const register = async (username, email, password) => {
+  const register = async (username, email, password, role, employerUsername) => {
     try {
-      const data = await authApi.register(username, email, password);
+      const data = await authApi.register(username, email, password, role, employerUsername);
       localStorage.setItem(TOKEN_KEY, data.token);
       localStorage.setItem(USER_KEY, JSON.stringify(data.user));
       setCurrentUser(data.user);

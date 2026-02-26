@@ -1,158 +1,134 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { clockIn, clockOut, getDashboard } from '../../api/timesheetApi';
 import './TimesheetPage.css';
 
 export default function TimesheetPage() {
-  const [employees, setEmployees] = useState([]);
-  const [records, setRecords] = useState([]);
-  const [activeRecords, setActiveRecords] = useState({});
-  const [summary, setSummary] = useState({});
-  const [selectedEmployee, setSelectedEmployee] = useState('');
+  const { currentUser } = useAuth();
+  const [dashboard, setDashboard] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [error, setError] = useState('');
   const [searchValue, setSearchValue] = useState('');
-  const [newEmployeeName, setNewEmployeeName] = useState('');
 
-  const isClockOutEnabled = selectedEmployee && activeRecords[selectedEmployee];
-
-  const handleAddEmployee = (e) => {
-    e.preventDefault();
-    const name = newEmployeeName.trim();
-
-    if (!name) {
-      alert('Employee name cannot be empty!');
-      return;
+  const loadDashboard = async () => {
+    try {
+      setError('');
+      const data = await getDashboard();
+      setDashboard(data);
+    } catch (err) {
+      setError(err.message || 'Failed to load timesheet dashboard.');
+    } finally {
+      setLoading(false);
     }
-
-    if (employees.includes(name)) {
-      alert('Employee already exists!');
-      return;
-    }
-
-    setEmployees((prev) => [...prev, name]);
-    setNewEmployeeName('');
   };
 
-  const handleEmployeeSelect = (e) => {
-    setSelectedEmployee(e.target.value);
-  };
+  useEffect(() => {
+    loadDashboard();
+  }, []);
 
-  const handleClockIn = () => {
-    if (!selectedEmployee) {
-      alert('Please select an employee!');
-      return;
+  const filteredRecords = useMemo(() => {
+    if (!dashboard?.records) {
+      return [];
     }
+    return dashboard.records.filter((record) =>
+      record.employeeName.toLowerCase().includes(searchValue.toLowerCase())
+    );
+  }, [dashboard, searchValue]);
 
-    if (activeRecords[selectedEmployee]) {
-      alert(`${selectedEmployee} has already clocked in!`);
-      return;
+  const handleClockIn = async () => {
+    try {
+      setActionLoading(true);
+      setError('');
+      await clockIn();
+      await loadDashboard();
+    } catch (err) {
+      setError(err.message || 'Clock in failed.');
+    } finally {
+      setActionLoading(false);
     }
-
-    const clockInTime = new Date();
-    setActiveRecords((prev) => ({
-      ...prev,
-      [selectedEmployee]: { employee: selectedEmployee, clockIn: clockInTime },
-    }));
   };
 
-  const formatDateTime = (date) => {
-    return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()} ${date.toLocaleTimeString()}`;
-  };
-
-  const handleClockOut = () => {
-    if (!selectedEmployee || !activeRecords[selectedEmployee]) {
-      alert('Please clock in first!');
-      return;
+  const handleClockOut = async () => {
+    try {
+      setActionLoading(true);
+      setError('');
+      await clockOut();
+      await loadDashboard();
+    } catch (err) {
+      setError(err.message || 'Clock out failed.');
+    } finally {
+      setActionLoading(false);
     }
-
-    const clockOutTime = new Date();
-    const clockInTime = activeRecords[selectedEmployee].clockIn;
-    const hoursWorked = ((clockOutTime - clockInTime) / (1000 * 60 * 60)).toFixed(2);
-
-    const formattedClockIn = formatDateTime(clockInTime);
-    const formattedClockOut = formatDateTime(clockOutTime);
-
-    setRecords((prev) => [
-      ...prev,
-      {
-        employee: selectedEmployee,
-        clockIn: formattedClockIn,
-        clockOut: formattedClockOut,
-        hoursWorked,
-      },
-    ]);
-
-    setSummary((prev) => {
-      const current = prev[selectedEmployee] || 0;
-      return { ...prev, [selectedEmployee]: current + parseFloat(hoursWorked) };
-    });
-
-    setActiveRecords((prev) => {
-      const next = { ...prev };
-      delete next[selectedEmployee];
-      return next;
-    });
   };
 
-  const filteredRecords = records.filter((record) =>
-    record.employee.toLowerCase().includes(searchValue.toLowerCase())
-  );
+  const formatDateTime = (value) => {
+    if (!value) {
+      return '-';
+    }
+    return new Date(value).toLocaleString();
+  };
+
+  if (loading) {
+    return <div className="container">Loading timesheet data...</div>;
+  }
+
+  if (!dashboard) {
+    return <div className="container">Unable to load dashboard.</div>;
+  }
+
+  const isEmployer = dashboard.role === 'EMPLOYER';
+  const isEmployee = dashboard.role === 'EMPLOYEE';
 
   return (
     <div className="container">
-      <section className="column employee-management">
-        <section className="employee-form">
-          <h2>Add Employee</h2>
-          <form onSubmit={handleAddEmployee}>
-            <input
-              type="text"
-              value={newEmployeeName}
-              onChange={(e) => setNewEmployeeName(e.target.value)}
-              placeholder="Enter Employee Name"
-              required
-            />
-            <button type="submit">Add Employee</button>
-          </form>
-        </section>
+      {error && <section className="column error-banner">{error}</section>}
 
-        <section className="timesheet-form">
-          <h2>Clock In / Clock Out</h2>
-          <form onSubmit={(e) => e.preventDefault()}>
-            <label htmlFor="employee">Select Employee:</label>
-            <select
-              id="employee"
-              value={selectedEmployee}
-              onChange={handleEmployeeSelect}
-              required
-            >
-              <option value="" disabled>
-                Select Employee
-              </option>
-              {employees.map((emp) => (
-                <option key={emp} value={emp}>
-                  {emp}
-                </option>
-              ))}
-            </select>
-            <button type="button" onClick={handleClockIn}>
+      {isEmployee && (
+        <section className="column employee-management">
+          <h2>Employee Dashboard</h2>
+          <p><strong>Employee:</strong> {currentUser?.username}</p>
+          <p><strong>Employer:</strong> {dashboard.employerName}</p>
+          <p><strong>Accumulated Hours:</strong> {Number(dashboard.accumulatedHours || 0).toFixed(2)} hrs</p>
+          <div className="button-group">
+            <button type="button" onClick={handleClockIn} disabled={actionLoading || dashboard.clockedIn}>
               Clock In
             </button>
-            <button
-              type="button"
-              onClick={handleClockOut}
-              disabled={!isClockOutEnabled}
-            >
+            <button type="button" onClick={handleClockOut} disabled={actionLoading || !dashboard.clockedIn}>
               Clock Out
             </button>
-          </form>
+          </div>
+          <p className="status-text">Status: {dashboard.clockedIn ? 'Currently Clocked In' : 'Currently Clocked Out'}</p>
         </section>
-      </section>
+      )}
+
+      {isEmployer && (
+        <section className="column summary">
+          <h2>Employer Dashboard</h2>
+          <p><strong>Employer:</strong> {currentUser?.username}</p>
+          <h3>Employee List</h3>
+          <div className="summaryTable">
+            {dashboard.employees.length > 0 ? (
+              dashboard.employees.map((employee) => (
+                <p key={employee}>{employee}</p>
+              ))
+            ) : (
+              <p>No employees linked yet.</p>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="column records">
-        <h2>Timesheet Records</h2>
-        <input
-          type="text"
-          value={searchValue}
-          onChange={(e) => setSearchValue(e.target.value)}
-          placeholder="Search Employee"
-        />
+        <h2>{isEmployer ? 'Employee Clock Logs' : 'My Clock Logs'}</h2>
+        {isEmployer && (
+          <input
+            type="text"
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            placeholder="Search Employee"
+          />
+        )}
         <table>
           <thead>
             <tr>
@@ -163,27 +139,16 @@ export default function TimesheetPage() {
             </tr>
           </thead>
           <tbody>
-            {filteredRecords.map((record, idx) => (
-              <tr key={`${record.employee}-${record.clockIn}-${idx}`}>
-                <td>{record.employee}</td>
-                <td>{record.clockIn}</td>
-                <td>{record.clockOut}</td>
-                <td>{record.hoursWorked} hrs</td>
+            {filteredRecords.map((record) => (
+              <tr key={record.recordId}>
+                <td>{record.employeeName}</td>
+                <td>{formatDateTime(record.clockInAt)}</td>
+                <td>{formatDateTime(record.clockOutAt)}</td>
+                <td>{record.hoursWorked == null ? '-' : `${Number(record.hoursWorked).toFixed(2)} hrs`}</td>
               </tr>
             ))}
           </tbody>
         </table>
-      </section>
-
-      <section className="column summary">
-        <h2>Employee Summary</h2>
-        <div className="summaryTable">
-          {Object.keys(summary).map((employee) => (
-            <p key={employee}>
-              <strong>{employee}:</strong> {summary[employee].toFixed(2)} hrs
-            </p>
-          ))}
-        </div>
       </section>
     </div>
   );

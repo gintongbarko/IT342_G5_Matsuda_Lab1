@@ -1,69 +1,27 @@
 flowchart TD
-    Start([User Opens Login Page]) --> CheckAuth{Already<br/>Authenticated?}
-    
-    CheckAuth -->|Yes| RedirectDash[Redirect to Dashboard]
-    RedirectDash --> End1([Already Logged In])
-    
-    CheckAuth -->|No| InputCreds[User Enters:<br/>- Username/Email<br/>- Password]
-    
-    InputCreds --> SubmitForm[User Clicks Login Button]
-    
-    SubmitForm --> ValidateClient{Client-Side<br/>Validation}
-    
-    ValidateClient -->|Empty Fields| ShowError[Display Error:<br/>'Please fill all fields']
-    ShowError --> InputCreds
-    
-    ValidateClient -->|Valid| SendRequest[Send POST Request<br/>to /api/login]
-    
-    SendRequest --> FindUser{User Exists<br/>in Database?}
-    
-    FindUser -->|No| ReturnError401[Return 401:<br/>Unauthorized]
-    ReturnError401 --> DisplayInvalid[Display:<br/>'Invalid credentials']
-    DisplayInvalid --> InputCreds
-    
-    FindUser -->|Yes| CheckActive{User Account<br/>Active?}
-    
-    CheckActive -->|No| ReturnError403[Return 403:<br/>Forbidden]
-    ReturnError403 --> DisplayInactive[Display:<br/>'Account is disabled']
-    DisplayInactive --> End2([Login Failed])
-    
-    CheckActive -->|Yes| VerifyPassword[Verify Password<br/>using bcrypt.compare]
-    
-    VerifyPassword --> PasswordMatch{Password<br/>Correct?}
-    
-    PasswordMatch -->|No| IncrementAttempts[Increment Failed<br/>Login Attempts]
-    IncrementAttempts --> CheckAttempts{Attempts > 5?}
-    CheckAttempts -->|Yes| LockAccount[Lock Account<br/>Temporarily]
-    LockAccount --> DisplayLocked[Display:<br/>'Account locked.<br/>Try again later']
-    DisplayLocked --> End3([Account Locked])
-    
-    CheckAttempts -->|No| ReturnInvalid[Return 401:<br/>Invalid Password]
-    ReturnInvalid --> DisplayInvalid
-    
-    PasswordMatch -->|Yes| ResetAttempts[Reset Failed<br/>Login Attempts to 0]
-    
-    ResetAttempts --> UpdateLastLogin[Update last_login<br/>timestamp in Database]
-    
-    UpdateLastLogin --> GenerateToken[Generate JWT Token/<br/>Create Session]
-    
-    GenerateToken --> ReturnSuccess[Return 200:<br/>Login Successful<br/>+ Auth Token<br/>+ User Data]
-    
-    ReturnSuccess --> StoreToken[Store Token in:<br/>- LocalStorage/SessionStorage<br/>- HTTP-Only Cookie]
-    
-    StoreToken --> RedirectDashboard[Redirect to Dashboard]
-    
-    RedirectDashboard --> End4([Login Successful])
-    
-    style Start fill:#90EE90
-    style End1 fill:#FFB6C6
-    style End2 fill:#FFB6C6
-    style End3 fill:#FFB6C6
-    style End4 fill:#98FB98
-    style ShowError fill:#FFE4B5
-    style DisplayInvalid fill:#FFE4B5
-    style DisplayInactive fill:#FFE4B5
-    style DisplayLocked fill:#FF6B6B
-    style GenerateToken fill:#DDA0DD
-    style VerifyPassword fill:#DDA0DD
-    style UpdateLastLogin fill:#87CEEB
-    style RedirectDashboard fill:#98FB98
+    Start([Open Login Screen/Page]) --> Input[Enter username/email + password]
+    Input --> Submit[POST /api/auth/login]
+    Submit --> UserFound{User exists?}
+
+    UserFound -->|No| Invalid401[401 Invalid credentials]
+    Invalid401 --> Input
+
+    UserFound -->|Yes| ActiveCheck{Account active?}
+    ActiveCheck -->|No| Disabled403[403 Account is disabled]
+    Disabled403 --> EndFail([Login blocked])
+
+    ActiveCheck -->|Yes| PasswordCheck{Password matches?}
+    PasswordCheck -->|No| IncFail[Increment failed_attempts]
+    IncFail --> LockCheck{failed_attempts >= 5?}
+    LockCheck -->|Yes| Lock[Set user inactive]
+    Lock --> Locked403[403 Account locked]
+    Locked403 --> EndFail
+    LockCheck -->|No| InvalidAgain[401 Invalid credentials]
+    InvalidAgain --> Input
+
+    PasswordCheck -->|Yes| ResetState[Reset failed_attempts + update last_login]
+    ResetState --> DeactivateSessions[Deactivate prior active sessions]
+    DeactivateSessions --> NewSession[Create session + generate JWT]
+    NewSession --> Success200[200 AuthResponse(token,user)]
+    Success200 --> Store[Store token/user]
+    Store --> EndOK([Navigate to dashboard])

@@ -20,6 +20,22 @@
   flex-direction: column;
 }
 
+.error-banner {
+  width: 100%;
+  color: #842029;
+  background: #f8d7da;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.status-text {
+  margin-top: 12px;
+}
+
 /* Responsive Layout */
 @media screen and (min-width: 1024px) {
   .container {

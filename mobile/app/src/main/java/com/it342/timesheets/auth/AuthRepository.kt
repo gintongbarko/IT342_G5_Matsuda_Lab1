@@ -38,11 +38,25 @@ class AuthRepository(private val tokenStore: TokenStore) {
         }
     }
 
-    suspend fun register(username: String, email: String, password: String): AuthResult =
+    suspend fun register(
+        username: String,
+        email: String,
+        password: String,
+        role: String,
+        employerUsername: String?
+    ): AuthResult =
         withContext(Dispatchers.IO) {
             ApiClient.setToken(null)
             try {
-                val response = ApiClient.api.register(RegisterRequest(username, email, password))
+                val response = ApiClient.api.register(
+                    RegisterRequest(
+                        username = username,
+                        email = email,
+                        password = password,
+                        role = role,
+                        employerUsername = employerUsername
+                    )
+                )
                 if (response.isSuccessful) {
                     val body = response.body()!!
                     tokenStore.saveAuth(body.token, body.user)
@@ -54,9 +68,23 @@ class AuthRepository(private val tokenStore: TokenStore) {
             } catch (e: HttpException) {
                 AuthResult.Error(parseError(e.code(), e.response()?.errorBody()?.string()))
             } catch (e: IOException) {
-                AuthResult.Error("Network error. Is the backend running?")
+                AuthResult.Error("Registration failed.")
             } catch (e: Exception) {
                 AuthResult.Error(e.message ?: "Registration failed.")
+            }
+        }
+
+    suspend fun searchEmployers(query: String): List<UserResponse> =
+        withContext(Dispatchers.IO) {
+            try {
+                val response = ApiClient.api.searchEmployers(query)
+                if (response.isSuccessful) {
+                    response.body().orEmpty()
+                } else {
+                    emptyList()
+                }
+            } catch (_: Exception) {
+                emptyList()
             }
         }
 
@@ -76,7 +104,7 @@ class AuthRepository(private val tokenStore: TokenStore) {
             } catch (e: HttpException) {
                 AuthResult.Error(parseError(e.code(), e.response()?.errorBody()?.string()))
             } catch (e: IOException) {
-                AuthResult.Error("Network error. Is the backend running?")
+                AuthResult.Error("Login failed.")
             } catch (e: Exception) {
                 AuthResult.Error(e.message ?: "Login failed.")
             }
@@ -100,10 +128,6 @@ class AuthRepository(private val tokenStore: TokenStore) {
             } catch (_: Exception) { null }
             (error?.error ?: error?.message)?.let { return it }
         }
-        return when (code) {
-            401 -> "Invalid credentials"
-            409 -> "User or email already exists"
-            else -> "Request failed ($code)"
-        }
+        return "Request failed with $code"
     }
 }

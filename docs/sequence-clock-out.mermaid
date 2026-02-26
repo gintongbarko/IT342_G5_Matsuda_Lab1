@@ -1,55 +1,33 @@
 sequenceDiagram
-    participant User as User (Browser)
-    participant UI as Dashboard UI
+    participant User as Employee User (Web/Mobile)
+    participant UI as Timesheet UI
     participant TSCtrl as TimesheetController
     participant TSSvc as TimesheetService
-    participant TSRepo as TimesheetRepository
-    participant DB as Database
-    participant Token as TokenProvider
-    
-    User->>UI: Click "Clock Out" button
-    
-    UI->>UI: Get token from localStorage
-    UI->>UI: Get selected employeeId
-    
-    alt No Employee Selected
-        UI-->>User: Display "Please select an employee"
-    else Employee Selected
-        UI->>TSCtrl: POST /api/timesheet/clock-out {employeeId, token}
-        
-        TSCtrl->>TSCtrl: Validate token
-        TSCtrl->>Token: getUserIdFromToken(token)
-        Token-->>TSCtrl: userId
-        
-        TSCtrl->>TSSvc: recordClockOut(employeeId, userId)
-        
-        TSSvc->>TSRepo: findActiveRecordByEmployee(employeeId)
-        TSRepo->>DB: SELECT * FROM timesheet_records WHERE employee_id = ? AND status = 'clocked_in'
-        DB-->>TSRepo: Record
-        TSRepo-->>TSSvc: TimesheetRecord or null
-        
-        alt No Active Clock In
-            TSSvc-->>TSCtrl: Error: Not clocked in
-            TSCtrl-->>UI: 404 Not Found
-            UI-->>User: Display "Please clock in first"
-        else Active Clock In Found
-            TSSvc->>TSSvc: Set clockOutTime = NOW()
-            TSSvc->>TSSvc: calculateHours()
-            Note over TSSvc: hoursWorked = (clockOutTime - clockInTime) / 3600<br/>status = 'completed'
-            
-            TSSvc->>TSRepo: update(timesheetRecord)
-            TSRepo->>DB: UPDATE timesheet_records SET clock_out_time = ?, hours_worked = ?, status = 'completed'
-            DB-->>TSRepo: Success
-            TSRepo-->>TSSvc: Updated TimesheetRecord
-            
-            TSSvc-->>TSCtrl: Clock out successful
-            TSCtrl-->>UI: 200 OK {record}
-            
-            UI->>UI: Disable "Clock Out" button
-            UI->>UI: Enable "Clock In" button
-            UI->>UI: Add record to timesheet table
-            UI->>UI: Update employee summary
-            UI-->>User: Display "Clocked out successfully"
-            UI-->>User: Show hours worked: X.XX hrs
-        end
+    participant EmpRepo as EmployeeRepository
+    participant TSRepo as TimesheetRecordRepository
+    participant DB as MySQL
+
+    User->>UI: Press Clock Out
+    UI->>TSCtrl: POST /api/timesheets/clock-out (Bearer token)
+    TSCtrl->>TSSvc: clockOut(authenticatedUserId)
+
+    TSSvc->>EmpRepo: findTopByEmployeeNameAndCreatedByUser_UserId...
+    EmpRepo->>DB: SELECT employee row
+    DB-->>EmpRepo: employee
+
+    TSSvc->>TSRepo: findFirstByEmployee_EmployeeIdAndStatus(..., "clocked_in")
+    TSRepo->>DB: SELECT active record
+    DB-->>TSRepo: active/null
+
+    alt No active clock-in record
+        TSSvc-->>TSCtrl: RuntimeException("No active clock-in record found")
+        TSCtrl-->>UI: 400 Bad Request
+    else Active record found
+        TSSvc->>TSSvc: Compute hoursWorked from now - clockInAt
+        TSSvc->>TSRepo: save(updated record status=clocked_out)
+        TSRepo->>DB: UPDATE timesheet_records
+        DB-->>TSRepo: saved
+        TSSvc-->>TSCtrl: success
+        TSCtrl-->>UI: 200 OK
+        UI-->>User: Refresh dashboard and accumulated hours
     end

@@ -21,7 +21,6 @@ fun AppHeader(
     currentUser: UserResponse?,
     onLoginClick: () -> Unit,
     onRegisterClick: () -> Unit,
-    onLogoutClick: () -> Unit,
     onConfirmLogout: () -> Unit
 ) {
     var showLogoutModal by remember { mutableStateOf(false) }

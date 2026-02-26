@@ -7,6 +7,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -36,6 +38,11 @@ public class AuthController {
             authService.logout(token);
         }
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/employers/search")
+    public ResponseEntity<List<UserResponse>> searchEmployers(@RequestParam(value = "q", required = false) String query) {
+        return ResponseEntity.ok(authService.searchEmployers(query));
     }
 
     private String extractToken(String authHeader) {

@@ -20,6 +20,8 @@ public class GlobalExceptionHandler {
             status = HttpStatus.UNAUTHORIZED;
         } else if ("User already exists".equals(message) || "Email already exists".equals(message)) {
             status = HttpStatus.CONFLICT;
+        } else if ("Only employees can clock in/out".equals(message)) {
+            status = HttpStatus.FORBIDDEN;
         } else if ("Account is disabled".equals(message) || "Account locked".equals(message)) {
             status = HttpStatus.FORBIDDEN;
         }

@@ -1,50 +1,15 @@
 flowchart TD
-    Start([User Clicks Logout Button]) --> CheckAuth{User<br/>Authenticated?}
-    
-    CheckAuth -->|No| ShowError[Display Error:<br/>'Not logged in']
-    ShowError --> End1([Logout Failed])
-    
-    CheckAuth -->|Yes| ConfirmLogout{Show Confirmation<br/>Dialog?}
-    
-    ConfirmLogout -->|User Cancels| CancelLogout[Cancel Logout]
-    CancelLogout --> End2([Logout Cancelled])
-    
-    ConfirmLogout -->|User Confirms| SendRequest[Send POST Request<br/>to /api/logout]
-    
-    SendRequest --> ValidateToken{Validate<br/>Auth Token/<br/>Session?}
-    
-    ValidateToken -->|Invalid/Expired| ClearClientOnly[Clear Client-Side<br/>Storage Only]
-    ClearClientOnly --> RedirectLogin2[Redirect to Login Page]
-    RedirectLogin2 --> End3([Forced Logout])
-    
-    ValidateToken -->|Valid| InvalidateServer[Server-Side Actions:<br/>- Invalidate JWT Token<br/>- Destroy Session<br/>- Add token to blacklist<br/>- Update logout timestamp]
-    
-    InvalidateServer --> ServerSuccess{Server<br/>Operation<br/>Successful?}
-    
-    ServerSuccess -->|No| ReturnError[Return 500:<br/>Server Error]
-    ReturnError --> ShowServerError[Display Warning:<br/>'Logout may have failed.<br/>Clearing local data']
-    ShowServerError --> ClearClient
-    
-    ServerSuccess -->|Yes| ReturnSuccess[Return 200:<br/>Logout Successful]
-    
-    ReturnSuccess --> ClearClient[Clear Client-Side Data:<br/>- Remove auth token<br/>- Clear LocalStorage/SessionStorage<br/>- Delete cookies<br/>- Clear user state]
-    
-    ClearClient --> ResetUI[Reset UI State:<br/>- Hide protected content<br/>- Show login button<br/>- Clear cached data]
-    
-    ResetUI --> RedirectLogin[Redirect to Login Page]
-    
-    RedirectLogin --> ShowMessage[Display:<br/>'Logged out successfully']
-    
-    ShowMessage --> End4([Logout Complete])
-    
-    style Start fill:#90EE90
-    style End1 fill:#FFB6C6
-    style End2 fill:#FFE4B5
-    style End3 fill:#FFE4B5
-    style End4 fill:#98FB98
-    style ShowError fill:#FFE4B5
-    style ShowServerError fill:#FFE4B5
-    style InvalidateServer fill:#87CEEB
-    style ClearClient fill:#DDA0DD
-    style RedirectLogin fill:#98FB98
-    style ShowMessage fill:#98FB98
+    Start([Tap/Click Logout]) --> Confirm{Confirm sign out?}
+    Confirm -->|No| Cancel([Stay signed in])
+
+    Confirm -->|Yes| Send[POST /api/auth/logout with Bearer token]
+    Send --> FindSession{Session token exists in DB?}
+
+    FindSession -->|Yes| MarkInactive[Set user_sessions.is_active = false]
+    FindSession -->|No| NoOp[No-op on server]
+
+    MarkInactive --> Return200[Return 200 OK]
+    NoOp --> Return200
+
+    Return200 --> ClearClient[Clear local token + user state]
+    ClearClient --> Redirect([Navigate to Login])

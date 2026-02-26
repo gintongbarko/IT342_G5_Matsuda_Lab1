@@ -2,17 +2,20 @@ erDiagram
     USERS ||--o{ EMPLOYEES : manages
     USERS ||--o{ TIMESHEET_RECORDS : creates
     EMPLOYEES ||--o{ TIMESHEET_RECORDS : "clocks in/out"
-    USERS ||--o{ USER_SESSIONS : has
+    USERS ||--|{ USER_SESSIONS : has
     
     USERS {
         int user_id PK "AUTO_INCREMENT"
         varchar_50 username UK "UNIQUE, NOT NULL"
         varchar_100 email UK "UNIQUE, NOT NULL"
         varchar_255 password_hash "NOT NULL"
+        varchar_20 role "NOT NULL"
+        int employer_id FK "NULL"
         datetime created_at "DEFAULT CURRENT_TIMESTAMP"
         datetime updated_at "DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
         datetime last_login "NULL"
         tinyint is_active "DEFAULT 1"
+        int failed_attempts "DEFAULT 0"
     }
     
     EMPLOYEES {

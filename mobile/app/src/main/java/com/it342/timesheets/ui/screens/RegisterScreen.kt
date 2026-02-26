@@ -10,6 +10,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -24,6 +29,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.it342.timesheets.data.UserResponse
 import com.it342.timesheets.ui.theme.ErrorText
 
 data class PasswordRule(val id: String, val label: String, val test: (String) -> Boolean)
@@ -39,17 +45,25 @@ private val PASSWORD_RULES = listOf(
     }
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
     error: String?,
-    onRegister: (username: String, email: String, password: String) -> Unit,
-    onNavigateToLogin: () -> Unit,
-    onClearError: () -> Unit = {}
+    employerOptions: List<UserResponse>,
+    loadingEmployers: Boolean,
+    onSearchEmployers: (query: String) -> Unit,
+    onRegister: (username: String, email: String, password: String, role: String, employerUsername: String?) -> Unit,
+    onNavigateToLogin: () -> Unit
 ) {
     var username by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var confirmPassword by rememberSaveable { mutableStateOf("") }
+    var role by rememberSaveable { mutableStateOf("EMPLOYEE") }
+    var roleMenuExpanded by rememberSaveable { mutableStateOf(false) }
+    var employerQuery by rememberSaveable { mutableStateOf("") }
+    var selectedEmployer by rememberSaveable { mutableStateOf("") }
+    var employerMenuExpanded by rememberSaveable { mutableStateOf(false) }
     var localError by rememberSaveable { mutableStateOf<String?>(null) }
     val displayError = error ?: localError
     val scrollState = rememberScrollState()
@@ -135,6 +149,93 @@ fun RegisterScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             modifier = Modifier.fillMaxWidth()
         )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        ExposedDropdownMenuBox(
+            expanded = roleMenuExpanded,
+            onExpandedChange = { roleMenuExpanded = it }
+        ) {
+            OutlinedTextField(
+                value = if (role == "EMPLOYER") "Employer (Admin)" else "Employee",
+                onValueChange = {},
+                label = { Text("Sign up as") },
+                readOnly = true,
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = roleMenuExpanded) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor()
+            )
+            DropdownMenu(
+                expanded = roleMenuExpanded,
+                onDismissRequest = { roleMenuExpanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Employer (Admin)") },
+                    onClick = {
+                        role = "EMPLOYER"
+                        selectedEmployer = ""
+                        employerQuery = ""
+                        roleMenuExpanded = false
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Employee") },
+                    onClick = {
+                        role = "EMPLOYEE"
+                        roleMenuExpanded = false
+                    }
+                )
+            }
+        }
+
+        if (role == "EMPLOYEE") {
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = employerQuery,
+                onValueChange = {
+                    employerQuery = it
+                    selectedEmployer = ""
+                    onSearchEmployers(it.trim())
+                },
+                label = { Text("Find Employer") },
+                placeholder = { Text("Search employer username") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            ExposedDropdownMenuBox(
+                expanded = employerMenuExpanded,
+                onExpandedChange = { employerMenuExpanded = it }
+            ) {
+                OutlinedTextField(
+                    value = selectedEmployer,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Select Employer") },
+                    placeholder = { Text(if (loadingEmployers) "Searching employers..." else "Choose employer") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = employerMenuExpanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
+                )
+                DropdownMenu(
+                    expanded = employerMenuExpanded,
+                    onDismissRequest = { employerMenuExpanded = false }
+                ) {
+                    employerOptions.forEach { employer ->
+                        DropdownMenuItem(
+                            text = { Text(employer.username) },
+                            onClick = {
+                                selectedEmployer = employer.username
+                                employerMenuExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(20.dp))
 
         Button(
@@ -150,7 +251,17 @@ fun RegisterScreen(
                     localError = "Password does not meet all requirements."
                     return@Button
                 }
-                onRegister(username.trim(), email.trim(), password)
+                if (role == "EMPLOYEE" && selectedEmployer.isBlank()) {
+                    localError = "Please choose your employer."
+                    return@Button
+                }
+                onRegister(
+                    username.trim(),
+                    email.trim(),
+                    password,
+                    role,
+                    if (role == "EMPLOYEE") selectedEmployer else null
+                )
             },
             modifier = Modifier.fillMaxWidth()
         ) {

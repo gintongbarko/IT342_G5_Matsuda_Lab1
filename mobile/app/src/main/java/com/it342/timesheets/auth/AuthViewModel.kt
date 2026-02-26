@@ -15,7 +15,9 @@ data class AuthUiState(
     val currentUser: UserResponse? = null,
     val loading: Boolean = true,
     val loginError: String? = null,
-    val registerError: String? = null
+    val registerError: String? = null,
+    val employerOptions: List<UserResponse> = emptyList(),
+    val loadingEmployers: Boolean = false
 )
 
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
@@ -54,15 +56,32 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun register(username: String, email: String, password: String) {
+    fun register(
+        username: String,
+        email: String,
+        password: String,
+        role: String,
+        employerUsername: String?
+    ) {
         viewModelScope.launch {
             _state.value = _state.value.copy(registerError = null)
-            when (val result = repository.register(username, email, password)) {
+            when (val result = repository.register(username, email, password, role, employerUsername)) {
                 is AuthResult.Success ->
                     _state.value = _state.value.copy(currentUser = result.user, registerError = null)
                 is AuthResult.Error ->
                     _state.value = _state.value.copy(registerError = normalizeRegisterError(result.message))
             }
+        }
+    }
+
+    fun searchEmployers(query: String) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(loadingEmployers = true)
+            val options = repository.searchEmployers(query)
+            _state.value = _state.value.copy(
+                employerOptions = options,
+                loadingEmployers = false
+            )
         }
     }
 

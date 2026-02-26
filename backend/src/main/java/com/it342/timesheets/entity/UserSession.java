@@ -14,8 +14,9 @@ public class UserSession {
     @Column(name = "session_id")
     private Integer sessionId;
 
-    @Column(name = "user_id", nullable = false)
-    private Integer userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Column(name = "session_token", nullable = false, unique = true, length = 255)
     private String sessionToken;
@@ -37,8 +38,8 @@ public class UserSession {
 
     public Integer getSessionId() { return sessionId; }
     public void setSessionId(Integer sessionId) { this.sessionId = sessionId; }
-    public Integer getUserId() { return userId; }
-    public void setUserId(Integer userId) { this.userId = userId; }
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
     public String getSessionToken() { return sessionToken; }
     public void setSessionToken(String sessionToken) { this.sessionToken = sessionToken; }
     public LocalDateTime getCreatedAt() { return createdAt; }

@@ -28,6 +28,7 @@ import com.it342.timesheets.ui.components.AppHeader
 import com.it342.timesheets.ui.screens.LoginScreen
 import com.it342.timesheets.ui.screens.RegisterScreen
 import com.it342.timesheets.ui.screens.TimesheetScreen
+import com.it342.timesheets.timesheet.TimesheetViewModel
 import com.it342.timesheets.ui.theme.TimesheetsTheme
 
 class MainActivity : ComponentActivity() {
@@ -44,6 +45,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun TimesheetsApp(authViewModel: AuthViewModel = viewModel()) {
+    val timesheetViewModel: TimesheetViewModel = viewModel()
     val authState by authViewModel.state.collectAsState()
     val navController = rememberNavController()
     val currentUser = authState.currentUser
@@ -54,7 +56,6 @@ fun TimesheetsApp(authViewModel: AuthViewModel = viewModel()) {
             currentUser = currentUser,
             onLoginClick = { navController.navigate(NavRoutes.Login) },
             onRegisterClick = { navController.navigate(NavRoutes.Register) },
-            onLogoutClick = { },
             onConfirmLogout = {
                 authViewModel.logout()
                 navController.navigate(NavRoutes.Login) {
@@ -89,7 +90,10 @@ fun TimesheetsApp(authViewModel: AuthViewModel = viewModel()) {
                             }
                         }
                     } else {
-                        TimesheetScreen()
+                        TimesheetScreen(
+                            currentUser = currentUser,
+                            timesheetViewModel = timesheetViewModel
+                        )
                     }
                 }
                 composable(NavRoutes.Login) {
@@ -121,14 +125,18 @@ fun TimesheetsApp(authViewModel: AuthViewModel = viewModel()) {
                     } else {
                         RegisterScreen(
                             error = authState.registerError,
-                            onRegister = { u, e, p -> authViewModel.register(u, e, p) },
+                            employerOptions = authState.employerOptions,
+                            loadingEmployers = authState.loadingEmployers,
+                            onSearchEmployers = { authViewModel.searchEmployers(it) },
+                            onRegister = { u, e, p, role, employerUsername ->
+                                authViewModel.register(u, e, p, role, employerUsername)
+                            },
                             onNavigateToLogin = {
                                 authViewModel.clearRegisterError()
                                 navController.navigate(NavRoutes.Login) {
                                     popUpTo(NavRoutes.Register) { inclusive = true }
                                 }
-                            },
-                            onClearError = { authViewModel.clearRegisterError() }
+                            }
                         )
                     }
                 }
