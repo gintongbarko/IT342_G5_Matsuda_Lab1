@@ -1,0 +1,127 @@
+flowchart LR
+    User[User]
+
+    subgraph WEB[Web App React]
+        direction TB
+        WebApp[App Router]
+        AuthCtx[AuthContext]
+        Layout[Layout + Header + LogoutModal]
+        ProtectedRoute[ProtectedRoute]
+        LoginPage[LoginPage]
+        RegisterPage[RegisterPage]
+        TimesheetPage[TimesheetPage]
+        WebAuthApi[authApi]
+        WebTimesheetApi[timesheetApi]
+        WebClient[client.js Fetch Wrapper]
+        BrowserStorage[localStorage\n timesheet_token + current_user]
+    end
+
+    subgraph MOBILE[Mobile App Android Kotlin + Compose]
+        direction TB
+        MainActivity[MainActivity + NavHost]
+        LoginScreen[LoginScreen]
+        RegisterScreen[RegisterScreen]
+        TimesheetScreen[TimesheetScreen]
+        AppHeader[AppHeader + LogoutModal]
+        AuthVM[AuthViewModel]
+        TimesheetVM[TimesheetViewModel]
+        AuthRepo[AuthRepository]
+        TimesheetRepo[TimesheetRepository]
+        ApiClient[ApiClient Retrofit + OkHttp]
+        TimesheetsApi[TimesheetsApi]
+        TokenStore[TokenStore SharedPreferences]
+    end
+
+    subgraph BACKEND[Backend Spring Boot]
+        direction TB
+        Security[SecurityConfig + JwtAuthFilter]
+        AuthController[AuthController]
+        UserController[UserController]
+        TimesheetController[TimesheetController]
+        AuthService[AuthService]
+        TimesheetService[TimesheetService]
+        JwtUtil[JwtUtil]
+        UserRepo[UserRepository]
+        EmployeeRepo[EmployeeRepository]
+        TimesheetRecordRepo[TimesheetRecordRepository]
+        SessionRepo[UserSessionRepository]
+        ExceptionHandler[GlobalExceptionHandler]
+    end
+
+    subgraph DB[Persistence]
+        direction TB
+        MySQL[(MySQL\n users, employees, timesheet_records, user_sessions)]
+    end
+
+    User --> WebApp
+    User --> MainActivity
+
+    WebApp --> Layout
+    WebApp --> ProtectedRoute
+    WebApp --> LoginPage
+    WebApp --> RegisterPage
+    WebApp --> TimesheetPage
+    WebApp --> AuthCtx
+
+    LoginPage --> AuthCtx
+    RegisterPage --> AuthCtx
+    ProtectedRoute --> AuthCtx
+    Layout --> AuthCtx
+    TimesheetPage --> AuthCtx
+
+    AuthCtx --> WebAuthApi
+    RegisterPage --> WebAuthApi
+    TimesheetPage --> WebTimesheetApi
+    WebAuthApi --> WebClient
+    WebTimesheetApi --> WebClient
+    WebClient <--> BrowserStorage
+
+    MainActivity --> AppHeader
+    MainActivity --> LoginScreen
+    MainActivity --> RegisterScreen
+    MainActivity --> TimesheetScreen
+    MainActivity --> AuthVM
+    MainActivity --> TimesheetVM
+
+    LoginScreen --> AuthVM
+    RegisterScreen --> AuthVM
+    TimesheetScreen --> TimesheetVM
+    AppHeader --> AuthVM
+
+    AuthVM --> AuthRepo
+    TimesheetVM --> TimesheetRepo
+    AuthRepo --> TimesheetsApi
+    TimesheetRepo --> TimesheetsApi
+    AuthRepo <--> TokenStore
+    TimesheetRepo --> TokenStore
+    AuthRepo --> ApiClient
+    TimesheetRepo --> ApiClient
+    ApiClient --> TimesheetsApi
+
+    WebClient -->|HTTP JSON| Security
+    TimesheetsApi -->|HTTP JSON| Security
+
+    Security --> AuthController
+    Security --> UserController
+    Security --> TimesheetController
+    Security --> JwtUtil
+
+    AuthController --> AuthService
+    UserController --> AuthService
+    TimesheetController --> TimesheetService
+
+    AuthService --> UserRepo
+    AuthService --> EmployeeRepo
+    AuthService --> SessionRepo
+    AuthService --> JwtUtil
+    TimesheetService --> UserRepo
+    TimesheetService --> EmployeeRepo
+    TimesheetService --> TimesheetRecordRepo
+
+    UserRepo --> MySQL
+    EmployeeRepo --> MySQL
+    TimesheetRecordRepo --> MySQL
+    SessionRepo --> MySQL
+    ExceptionHandler -.handles.-> AuthController
+    ExceptionHandler -.handles.-> UserController
+    ExceptionHandler -.handles.-> TimesheetController

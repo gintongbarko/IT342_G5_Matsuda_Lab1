@@ -1,4 +1,4 @@
-# ⏳ Employee Timesheet Tracker (Unofficial name)
+# ⏳ CrewClock (Employee Timesheet Tracker)
 
 A web-based application designed to manage employee time tracking and attendance records.
 
@@ -9,7 +9,7 @@ A web-based application designed to manage employee time tracking and attendance
 
 ## 📌 Overview
 
-The Employee Timesheet Tracker is a full-stack web and mobile application designed to streamline employee time management and attendance tracking across multiple platforms.
+The CrewClock is a full-stack web and mobile application designed to streamline employee time management and attendance tracking across multiple platforms.
 
 ------------------------------------------------------------------------
 
@@ -53,7 +53,7 @@ The Employee Timesheet Tracker is a full-stack web and mobile application design
 
 ### **Deployment:**
 
-  **TBD** - TBD
+  **Render** - Used for hosting the React application with Gunicorn
 
 ------------------------------------------------------------------------
 
